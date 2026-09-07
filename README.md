@@ -1,107 +1,227 @@
-# AI 知识库 (AI Knowledge Base)
+# AI 知识库 — 使用说明
 
-AI 驱动的智能数据库软件，支持多格式文件导入、智能搜索、知识库问答。
+> **声明**：本项目从代码实现、界面设计到文档撰写，均由 AI 辅助完成。
 
-## 快速启动
 
-```bash
-# 安装依赖
+## 一、项目简介
+
+AI 知识库是一个基于 Python + FastAPI 的智能文档问答系统。核心能力：
+
+- **多格式导入**：PDF、Word、Excel、CSV、JSON、Markdown、HTML、XML、YAML、TXT 等 20+ 格式
+- **智能分块**：按语义段落切分，chunk_size=800，overlap=200，避免关键信息被截断
+- **多模式检索**：关键词（FTS5）、语义（Embedding）、混合（RRF 融合）、词条解释
+- **RAG 问答**：检索增强生成，AI 基于知识库内容回答并标注引用来源
+- **Reranker 重排序**：交叉编码器二次排序，显著提升检索精度
+
+---
+
+## 二、环境要求
+
+- Python 3.11+
+- 依赖见 equirements.txt
+
+---
+
+## 三、安装与启动
+
+`ash
+# 1. 进入项目目录
+cd 数据库
+
+# 2. 安装依赖
 pip install -r requirements.txt
 
-# 启动服务
-python -m uvicorn app:app --host 127.0.0.1 --port 8800 --reload
+# 3. 启动服务
+python -m uvicorn app:app --host 127.0.0.1 --port 8800
 
-# 访问界面
+# 4. 浏览器访问
 # http://127.0.0.1:8800
-```
+`
 
-## 功能概览
+启动后终端会显示 Loaded 10 skills，表示内置解析技能已加载。
 
-### 📥 智能导入
-- 拖放上传文件，支持 20+ 格式：CSV, JSON, JSONL, Excel, PDF, Word, Markdown, HTML, XML, YAML, TXT
-- **未知格式自动学习**：AI 分析文件结构 + 联网搜索解析方法 → 自动生成解析器技能 → 保存复用
-- AI 将原始数据整理为结构化 Markdown，分块存储
+---
 
-### 🔍 多模式搜索
-- **关键词搜索**：SQLite FTS5 全文检索
-- **语义搜索**：Embedding 向量余弦相似度匹配（需配置 Embedding 模型）
-- **混合搜索**：关键词 + 语义，RRF 融合排序
-- **AI 智能搜索**：AI 拆解查询 → 多关键词 + 语义搜索 → AI 重排序
+## 四、首次配置（设置页面）
 
-### 💬 知识库问答
-- RAG 模式：检索相关文档分块 → AI 生成带引用的答案
-- 支持流式输出 (SSE)
-- 纯生成模式：无需知识库的通用 AI 对话
+点击左侧菜单「⚙️ 设置」，按需填写以下配置：
 
-### 🧩 技能系统
-- **内置技能**：CSV, JSON, Excel, PDF, Word, Markdown, HTML, XML, YAML, Text
-- **AI 学习技能**：遇到未知格式时，AI 自动学习解析方法并保存为可复用技能
-- 技能热加载，支持自定义扩展
+### 4.1 AI 对话模型（必须）
 
-### ⚙️ 灵活配置
-- AI 对话模型：任意 OpenAI 兼容 API（OpenAI, DeepSeek, Ollama, vLLM, SiliconFlow 等）
-- Embedding 模型：可选，用于语义搜索
-- Reranker 模型：可选，用于搜索结果重排序（推荐 BAAI/bge-reranker-v2-m3）
-- 搜索 API：Tavily / Bing / 自定义端点
-- 所有配置可在页面内设置并测试连接
+| 字段 | 示例值 |
+|------|--------|
+| API Base URL | https://api.xiaomimimo.com/v1 |
+| API Key | sk-xxxx |
+| 模型名称 | mimo-v2.5 |
 
-## 目录结构
+填写后点「测试连接」确认可用，再点「💾 保存设置」。
 
-```
+### 4.2 Embedding 模型（推荐，用于语义搜索）
+
+| 字段 | 示例值 |
+|------|--------|
+| API Base URL | https://api.siliconflow.cn/v1 |
+| API Key | sk-xxxx |
+| 模型名称 | Qwen/Qwen3-VL-Embedding-8B |
+
+不配置则只能使用关键词搜索。
+
+### 4.3 Reranker 模型（推荐，提高检索质量）
+
+| 字段 | 示例值 |
+|------|--------|
+| API Base URL | https://api.siliconflow.cn/v1 |
+| API Key | sk-xxxx |
+| 模型名称 | Qwen/Qwen3-Reranker-8B |
+
+Reranker 在 Embedding 初筛后对结果重新排序，把最相关的内容排到最前面。
+
+> **注意**：配置完成后务必点击页面底部「💾 保存设置」，否则刷新后会丢失。
+
+---
+
+## 五、导入文档
+
+1. 点击左侧菜单「📥 导入文档」
+2. 拖拽文件到上传区域，或点击选择文件
+3. 系统自动完成：格式检测 → 内容解析 → AI 整理为 Markdown → 智能分块 → 生成 Embedding
+4. 导入完成后可在「📄 文档列表」查看
+
+支持同时导入多个文件。未知格式会由 AI 自动学习解析方法并保存为可复用技能。
+
+---
+
+## 六、搜索知识库
+
+点击左侧菜单「🔍 搜索知识库」，输入关键词即可检索。
+
+### 搜索模式说明
+
+| 模式 | 原理 | 适用场景 |
+|------|------|----------|
+| **关键词** | FTS5 全文检索，精确匹配 | 知道原文确切用词 |
+| **语义** | Embedding 向量余弦相似度 | 不确定原文措辞，按含义搜索 |
+| **混合** | 关键词 + 语义，RRF 融合排序 | 通用场景，推荐默认使用 |
+| **词条** | AI 解释术语 + 查找知识库引用 | 学习新概念、术语定义 |
+
+输入中文时，系统会自动调用 AI 将查询翻译成英文并扩展相关学术术语，提升跨语言检索效果。
+
+---
+
+## 七、AI 对话（RAG 问答）
+
+### 7.1 创建对话
+
+1. 点击左侧菜单「💬 AI 对话」
+2. 点击「+ 新建对话」
+3. 输入问题，按回车或点发送
+
+### 7.2 知识库增强
+
+- 勾选「📚 知识库增强」启用 RAG 模式
+- 选择搜索模式（推荐「混合」）
+- AI 会先从知识库检索相关内容，再基于检索结果生成回答
+- 回答底部会显示引用来源文档和页码
+
+### 7.3 检索流程
+
+`
+用户提问
+  → 中文查询扩展（翻译 + 术语扩展）
+  → 多模式搜索（Top 15）
+  → Reranker 重排序（Top 12）
+  → 取前 8 个最相关 Chunk 构建上下文
+  → AI 基于上下文生成回答
+`
+
+### 7.4 其他功能
+
+- **流式输出**：回答逐字显示，无需等待全部生成
+- **联网搜索**：勾选「🌐 联网搜索」可同时获取外部信息（需配置搜索 API）
+- **多轮对话**：支持上下文连续对话
+
+---
+
+## 八、查看日志
+
+1. 点击左侧菜单「📋 日志」
+2. 实时显示系统运行日志（搜索、Rerank、AI 调用等各阶段状态）
+3. 日志同时保存在 data/logs/app.log，刷新页面不丢失
+
+---
+
+## 九、项目目录结构
+
+`
 数据库/
-├── app.py                    # FastAPI 主应用
+├── app.py                    # FastAPI 主应用（路由定义）
+├── requirements.txt          # Python 依赖
 ├── core/
-│   ├── database.py           # SQLite 数据层
-│   ├── ai.py                 # AI 客户端（对话/Embedding/Reranker/搜索）
-│   ├── search.py             # 搜索引擎（关键词/语义/混合/AI）
-│   ├── chat.py               # RAG 问答（含 Reranker 优化）
-│   ├── importer.py           # 文件导入管线（智能分块+重叠）
+│   ├── database.py           # SQLite 数据层（表结构、CRUD、FTS5 索引）
+│   ├── ai.py                 # AI 客户端（对话、Embedding、Reranker、模型列表）
+│   ├── search.py             # 搜索引擎（关键词、语义、混合、词条）
+│   ├── chat.py               # RAG 问答（检索 → 重排序 → 上下文构建 → AI 生成）
+│   ├── importer.py           # 文件导入管线（格式检测、解析、分块、Embedding）
+│   ├── logger.py             # 日志系统（内存环形缓冲 + 文件持久化 + SSE 推送）
 │   └── skill_loader.py       # 技能动态加载器
 ├── skills/
-│   ├── builtin/              # 内置解析技能
-│   └── learned/              # AI 学习生成的技能
+│   └── builtin/              # 内置格式解析技能（PDF、Word、Excel、CSV 等）
 ├── static/
-│   └── index.html            # 前端界面
+│   └── index.html            # 前端界面（单页应用）
 ├── data/
-│   ├── database.sqlite       # 数据库文件（运行后生成）
-│   ├── uploads/              # 上传文件存储
-│   ├── images/               # 提取的图片
-│   └── logs/                 # 运行日志
-├── requirements.txt
-└── README.md
-```
+│   ├── database.sqlite       # SQLite 数据库（运行后自动生成）
+│   ├── uploads/              # 上传的原始文件
+│   ├── images/               # 文档中提取的图片
+│   └── logs/                 # 运行日志文件
+└── 使用说明.md               # 本文件
+`
 
-## API 端点
+---
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | /api/documents/upload | 上传导入文件 |
-| GET | /api/documents | 文档列表 |
-| GET | /api/documents/:id | 文档详情 |
-| DELETE | /api/documents/:id | 删除文档 |
-| GET | /api/search?q=&mode= | 搜索 |
-| POST | /api/chats | 创建对话 |
-| GET | /api/chats | 对话列表 |
-| POST | /api/chats/:id/messages | 发送消息 (支持 SSE) |
-| GET/POST | /api/settings | 读写设置 |
-| POST | /api/settings/test-ai | 测试 AI 连接 |
-| POST | /api/settings/test-embedding | 测试 Embedding |
-| POST | /api/settings/test-reranker | 测试 Reranker |
-| POST | /api/settings/test-search | 测试搜索 API |
-| GET | /api/skills | 技能列表 |
-| GET | /api/stats | 统计信息 |
+## 十、技术栈
 
-## 技术栈
+| 层级 | 技术 |
+|------|------|
+| 后端框架 | Python 3.11+, FastAPI, uvicorn |
+| 数据库 | SQLite + FTS5 全文检索 |
+| AI 接口 | OpenAI 兼容 API（支持 OpenAI / DeepSeek / SiliconFlow / Ollama 等） |
+| 搜索 | FTS5 关键词 + Embedding 语义 + RRF 混合 + Reranker 重排序 |
+| 前端 | 原生 HTML/CSS/JavaScript, SSE 实时推送 |
+| HTTP 客户端 | httpx（异步） |
 
-- **后端**：Python 3.11+, FastAPI, SQLite (FTS5), httpx
-- **前端**：原生 HTML/CSS/JavaScript, SSE
-- **AI**：OpenAI 兼容 API (支持多模型)
-- **搜索**：FTS5 全文检索 + Embedding 语义搜索 + RRF 混合排序 + Reranker 重排序
+---
 
-## 优化特性
+## 十一、核心优化点
 
-1. **智能分块**：按段落切分，chunk_size=800, chunk_overlap=200，避免关键信息被切断
-2. **中英文查询扩展**：AI 自动将中文查询翻译成英文搜索词
-3. **Reranker 重排序**：使用交叉编码器对搜索结果重排序，提高相关性
-4. **多级检索**：搜索 → Reranker → 上下文构建，确保关键信息不丢失
-5. **严谨问答**：System Prompt 优化，处理对照实验、突变体逻辑推导等复杂场景
+1. **智能语义分块**：按段落切分而非固定字符数，配合 200 字符重叠，确保论述完整性
+2. **中英文查询扩展**：AI 自动将中文查询翻译为英文并扩展同义术语，解决跨语言检索问题
+3. **Reranker 重排序**：Embedding 初筛后用交叉编码器重新排序，显著提高相关性
+4. **多级检索管线**：搜索(15) → Reranker(12) → 取前 8 构建上下文，逐层精筛
+5. **学术严谨问答 Prompt**：专门优化的 System Prompt，正确处理对照实验、突变体逻辑推导等复杂场景
+
+---
+
+## 十二、常见问题
+
+**Q: 启动后无法访问？**
+检查端口 8800 是否被占用，可改用其他端口：--port 8801
+
+**Q: AI 不回答或报错？**
+检查对话模型的 API Key 和模型名称是否正确，查看日志页面获取详细错误。
+
+**Q: 搜索不到相关内容？**
+确认文档已成功导入（状态为「ready」），尝试切换搜索模式，检查 Embedding 是否配置。
+
+**Q: 导入文档失败？**
+查看日志获取错误信息。确认文件格式受支持，尝试重新导入。
+
+**Q: 如何重新导入文档？**
+在「📄 文档列表」中删除旧文档，重新上传即可。新文档会使用最新的分块策略。
+
+**Q: 配置刷新后丢失？**
+修改设置后必须点击底部「💾 保存设置」按钮。
+
+---
+
+**完成！祝使用愉快 🎉**
+

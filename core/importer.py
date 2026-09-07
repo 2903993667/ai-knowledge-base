@@ -12,7 +12,12 @@ from . import skill_loader
 from . import ai
 from . import logger
 
-UPLOAD_DIR = Path(__file__).resolve().parent.parent / "data" / "uploads"
+def _get_data_dir():
+    if getattr(__import__('sys'), 'frozen', False):
+        return Path(__import__('sys').executable).resolve().parent / "data"
+    return Path(__file__).resolve().parent.parent / "data"
+
+UPLOAD_DIR = _get_data_dir() / "uploads"
 
 # File signatures for format detection (magic bytes)
 MAGIC_BYTES = {
@@ -481,3 +486,4 @@ async def _embed_chunks(doc_id, chunks):
             conn.execute("UPDATE chunks SET embedding=? WHERE doc_id=? AND content=?", (blob, doc_id, ch["content"]))
     conn.commit()
     conn.close()
+

@@ -6,7 +6,14 @@ import json
 import importlib.util
 from pathlib import Path
 
-SKILLS_DIR = Path(__file__).resolve().parent.parent / "skills"
+def _get_skills_dir():
+    if getattr(__import__('sys'), 'frozen', False):
+        exe_dir = Path(__import__('sys').executable).resolve().parent
+        internal = exe_dir / "_internal" / "skills"
+        return internal if internal.exists() else exe_dir / "skills"
+    return Path(__file__).resolve().parent.parent / "skills"
+
+SKILLS_DIR = _get_skills_dir()
 BUILTIN_DIR = SKILLS_DIR / "builtin"
 LEARNED_DIR = SKILLS_DIR / "learned"
 
@@ -76,3 +83,4 @@ def save_learned_skill(code, skill_name, extensions):
     with open(filepath, "w", encoding="utf-8") as f:
         f.write(code)
     return str(filepath)
+

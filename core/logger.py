@@ -7,7 +7,12 @@ from collections import deque
 from datetime import datetime, timezone
 from pathlib import Path
 
-LOG_DIR = Path(__file__).resolve().parent.parent / "data" / "logs"
+def _get_log_dir():
+    if getattr(__import__('sys'), 'frozen', False):
+        return Path(__import__('sys').executable).resolve().parent / "data" / "logs"
+    return Path(__file__).resolve().parent.parent / "data" / "logs"
+
+LOG_DIR = _get_log_dir()
 LOG_FILE = LOG_DIR / "app.log"
 
 def _ensure_log_dir():
@@ -67,3 +72,4 @@ def subscribe():
             _subscribers.remove(q)
 
     return q, unsubscribe
+

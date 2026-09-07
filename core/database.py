@@ -4,7 +4,13 @@ import sqlite3, json, uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-DB_DIR = Path(__file__).resolve().parent.parent / "data"
+def _get_base_dir():
+    if getattr(__import__('sys'), 'frozen', False):
+        return Path(__import__('sys').executable).resolve().parent
+    return Path(__file__).resolve().parent.parent
+
+_base = _get_base_dir()
+DB_DIR = _base / "data"
 DB_PATH = DB_DIR / "database.sqlite"
 
 def _now(): return datetime.now(timezone.utc).isoformat()
@@ -260,3 +266,4 @@ def reindex_fts():
         FROM chunks c LEFT JOIN documents d ON c.doc_id = d.id
     """)
     conn.commit(); conn.close()
+

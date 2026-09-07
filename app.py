@@ -33,7 +33,14 @@ async def lifespan(app):
 
 app = FastAPI(title="AI Knowledge Base", version="1.0.0", lifespan=lifespan)
 
-STATIC_DIR = Path(__file__).parent / "static"
+def _get_static_dir():
+    if getattr(__import__('sys'), 'frozen', False):
+        exe_dir = Path(__import__('sys').executable).resolve().parent
+        internal = exe_dir / "_internal" / "static"
+        return internal if internal.exists() else exe_dir / "static"
+    return Path(__file__).parent / "static"
+
+STATIC_DIR = _get_static_dir()
 
 
 
@@ -288,3 +295,4 @@ async def fetch_models(request: Request):
         return {"ok": True, "models": models}
     except Exception as e:
         return {"ok": False, "error": str(e)}
+

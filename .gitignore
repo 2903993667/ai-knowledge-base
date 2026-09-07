@@ -7,3 +7,6 @@ data/images/
 data/logs/
 *.sqlite
 .env
+build/
+dist/
+*.spec

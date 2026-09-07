@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+*.pyo
+data/database.sqlite
+data/uploads/
+data/images/
+data/logs/
+*.sqlite
+.env

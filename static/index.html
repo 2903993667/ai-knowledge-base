@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 知识库</title>
+<style>
+:root{--bg:#0f1117;--bg2:#1a1d27;--bg3:#242837;--border:#2d3148;--text:#e4e6f0;--text2:#8b8fa3;--accent:#6366f1;--accent2:#818cf8;--green:#22c55e;--red:#ef4444;--orange:#f59e0b;--radius:8px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden}
+.layout{display:flex;height:100vh}
+.sidebar{width:240px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar .logo{padding:20px;font-size:18px;font-weight:700;color:var(--accent2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.sidebar .logo svg{width:24px;height:24px}
+.sidebar nav{flex:1;padding:8px}
+.sidebar nav a{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--radius);color:var(--text2);text-decoration:none;font-size:14px;cursor:pointer;transition:all .15s}
+.sidebar nav a:hover{background:var(--bg3);color:var(--text)}
+.sidebar nav a.active{background:var(--accent);color:#fff}
+.sidebar .stats{padding:14px;border-top:1px solid var(--border);font-size:12px;color:var(--text2)}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:52px;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:12px;background:var(--bg2)}
+.topbar h2{font-size:16px;font-weight:600}
+.topbar .badge{background:var(--bg3);padding:2px 8px;border-radius:12px;font-size:12px;color:var(--text2)}
+.content{flex:1;overflow-y:auto;padding:20px}
+.page{display:none}.page.active{display:block}
+
+/* Import */
+.upload-zone{border:2px dashed var(--border);border-radius:12px;padding:60px 20px;text-align:center;cursor:pointer;transition:all .2s}
+.upload-zone:hover,.upload-zone.dragover{border-color:var(--accent);background:rgba(99,102,241,.05)}
+.upload-zone h3{font-size:18px;margin-bottom:8px}
+.upload-zone p{color:var(--text2);font-size:14px}
+.upload-zone input{display:none}
+.doc-list{margin-top:20px}
+.doc-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;transition:border-color .15s}
+.doc-card:hover{border-color:var(--accent)}
+.doc-card .info{flex:1}
+.doc-card .info .name{font-weight:600;font-size:14px}
+.doc-card .info .meta{font-size:12px;color:var(--text2);margin-top:4px}
+.doc-card .status{padding:3px 10px;border-radius:12px;font-size:12px;font-weight:500}
+.status-ready{background:rgba(34,197,94,.15);color:var(--green)}
+.status-pending{background:rgba(245,158,11,.15);color:var(--orange)}
+.status-error{background:rgba(239,68,68,.15);color:var(--red)}
+.doc-card .actions{display:flex;gap:8px;margin-left:12px}
+.btn-sm{padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;font-size:12px}
+.btn-sm:hover{border-color:var(--accent);color:var(--text)}
+
+/* Search */
+.search-bar{display:flex;gap:10px;margin-bottom:20px}
+.search-bar input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;color:var(--text);font-size:14px;outline:none}
+.search-bar input:focus{border-color:var(--accent)}
+.search-bar select{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;color:var(--text);font-size:13px;outline:none}
+.search-bar button{background:var(--accent);color:#fff;border:none;border-radius:var(--radius);padding:10px 20px;cursor:pointer;font-size:14px;font-weight:500}
+.search-bar button:hover{background:var(--accent2)}
+.result-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.result-card .doc-ref{font-size:12px;color:var(--accent2);margin-bottom:6px}
+.result-card h4{font-size:14px;margin-bottom:8px}
+.result-card .preview{font-size:13px;color:var(--text2);line-height:1.6;max-height:120px;overflow:hidden}
+.result-card .preview mark{background:rgba(99,102,241,.2);color:var(--accent2);padding:0 2px;border-radius:2px}
+
+/* Chat */
+.chat-layout{display:flex;height:calc(100vh - 72px);gap:0}
+.chat-sidebar{width:260px;border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--bg2)}
+.chat-sidebar .new-chat{padding:12px;border-bottom:1px solid var(--border)}
+.chat-sidebar .new-chat button{width:100%;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;font-size:14px}
+.chat-list{flex:1;overflow-y:auto;padding:8px}
+.chat-item{padding:10px 12px;border-radius:var(--radius);cursor:pointer;font-size:13px;color:var(--text2);margin-bottom:4px;display:flex;justify-content:space-between;align-items:center}
+.chat-item:hover{background:var(--bg3)}
+.chat-item.active{background:var(--accent);color:#fff}
+.chat-item .del{opacity:0;cursor:pointer;font-size:11px}
+.chat-item:hover .del{opacity:.6}
+.chat-main{flex:1;display:flex;flex-direction:column}
+.chat-messages{flex:1;overflow-y:auto;padding:20px}
+.msg{margin-bottom:16px;max-width:85%}
+.msg.user{margin-left:auto}
+.msg .bubble{padding:12px 16px;border-radius:12px;font-size:14px;line-height:1.7;word-break:break-word}
+.msg.user .bubble{background:var(--accent);color:#fff;border-bottom-right-radius:4px}
+.msg.assistant .bubble{background:var(--bg2);border:1px solid var(--border);border-bottom-left-radius:4px}
+.msg .sources{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
+.msg .source-tag{font-size:11px;background:var(--bg3);padding:2px 8px;border-radius:10px;color:var(--text2)}
+.chat-input{border-top:1px solid var(--border);padding:14px 20px;display:flex;gap:10px;background:var(--bg2)}
+.chat-input input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;color:var(--text);font-size:14px;outline:none}
+.chat-input input:focus{border-color:var(--accent)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.chat-input button{background:var(--accent);color:#fff;border:none;border-radius:var(--radius);padding:10px 20px;cursor:pointer;font-weight:500}
+.chat-opts{padding:6px 20px 0;display:flex;gap:12px;align-items:center;font-size:12px;color:var(--text2)}
+.chat-opts label{display:flex;align-items:center;gap:4px;cursor:pointer}
+.chat-opts select{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:2px 6px;color:var(--text);font-size:12px}
+
+/* Settings */
+.settings-section{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px}
+.settings-section h3{font-size:15px;margin-bottom:14px;color:var(--accent2)}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:13px;color:var(--text2);margin-bottom:4px}
+.field input,.field select,.field textarea{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px 12px;color:var(--text);font-size:13px;outline:none;font-family:inherit}
+.field input:focus,.field textarea:focus{border-color:var(--accent)}
+.field .hint{font-size:11px;color:var(--text2);margin-top:2px}
+.btn{padding:8px 18px;border-radius:6px;border:none;cursor:pointer;font-size:13px;font-weight:500}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent2)}
+.btn-test{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}.btn-test:hover{border-color:var(--accent)}
+.test-result{margin-top:8px;padding:8px 12px;border-radius:6px;font-size:12px;display:none}
+.test-ok{background:rgba(34,197,94,.1);color:var(--green);display:block}
+.log-entry{padding:2px 0;border-bottom:1px solid rgba(255,255,255,.03);display:flex;gap:8px;align-items:flex-start}
+.log-time{color:var(--text2);flex-shrink:0;width:65px}
+.log-level{flex-shrink:0;width:44px;font-weight:600;text-transform:uppercase;font-size:11px;padding:1px 4px;border-radius:3px;text-align:center}
+.log-level.info{color:#22c55e;background:rgba(34,197,94,.1)}
+.log-level.warn{color:#f59e0b;background:rgba(245,158,11,.1)}
+.log-level.error{color:#ef4444;background:rgba(239,68,68,.1)}
+.log-level.debug{color:#8b8fa3;background:rgba(139,143,163,.1)}
+.log-module{color:var(--accent2);flex-shrink:0;min-width:70px}
+.log-msg{color:var(--text);word-break:break-word}
+.result-card img,.doc-content img,.preview img{max-width:100%;max-height:300px;border-radius:6px;margin:8px 0;border:1px solid var(--border)}
+
+
+.test-fail{background:rgba(239,68,68,.1);color:var(--red);display:block}
+
+/* Skills */
+.skill-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.skill-card .info{flex:1}
+.skill-card .info .name{font-weight:600;font-size:14px}
+.skill-card .info .desc{font-size:12px;color:var(--text2);margin-top:2px}
+.skill-card .source-tag{font-size:11px;padding:2px 8px;border-radius:10px}
+.source-builtin{background:rgba(99,102,241,.15);color:var(--accent2)}
+.source-learned{background:rgba(34,197,94,.15);color:var(--green)}
+
+/* Loading */
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 20px;font-size:13px;z-index:9999;animation:fadeIn .3s}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+.model-row{display:flex;gap:8px;align-items:flex-end}
+.model-row .field{flex:1}
+.model-row .btn-fetch{padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--accent2);cursor:pointer;font-size:13px;white-space:nowrap;height:fit-content;margin-bottom:12px}
+.model-row .btn-fetch:hover{border-color:var(--accent)}
+.model-dropdown{position:absolute;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);max-height:240px;overflow-y:auto;z-index:100;width:100%;display:none;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.model-dropdown.open{display:block}
+.model-dropdown .opt{padding:8px 12px;cursor:pointer;font-size:13px;display:flex;justify-content:space-between;border-bottom:1px solid var(--border)}
+.model-dropdown .opt:last-child{border-bottom:none}
+.model-dropdown .opt:hover{background:var(--accent);color:#fff}
+.model-dropdown .opt .owner{color:var(--text2);font-size:11px}
+.model-dropdown .opt:hover .owner{color:rgba(255,255,255,.7)}
+
+</style>
+</head>
+<body>
+<div class="layout">
+<aside class="sidebar">
+<div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> AI 知识库</div>
+<nav>
+<a data-page="import" class="active" onclick="showPage('import')">📥 导入</a>
+<a data-page="docs" onclick="showPage('docs')">📚 文档</a>
+<a data-page="search" onclick="showPage('search')">🔍 搜索</a>
+<a data-page="chat" onclick="showPage('chat')">💬 对话</a>
+<a data-page="skills" onclick="showPage('skills')">🧩 技能</a>
+<a data-page="settings" onclick="showPage('settings')">⚙️ 设置</a>
+<a data-page="logs" onclick="showPage('logs')">📋 日志</a>
+</nav>
+<div class="stats" id="stats">加载中...</div>
+</aside>
+
+<main class="main">
+<div class="topbar"><h2 id="pageTitle">导入文档</h2></div>
+<div class="content">
+
+<!-- Import Page -->
+<div class="page active" id="page-import">
+<div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+<h3>📂 拖放文件到这里，或点击选择</h3>
+<p>支持 CSV, JSON, Excel, PDF, Word, Markdown, HTML, XML, YAML, TXT 等格式<br>未知格式 AI 将自动学习解析</p>
+<input type="file" id="fileInput" multiple onchange="handleUpload(this.files)">
+</div>
+<div id="uploadProgress" style="margin-top:16px"></div>
+<div class="doc-list" id="recentDocs"></div>
+</div>
+
+<!-- Documents Page -->
+<div class="page" id="page-docs">
+<div class="doc-list" id="allDocs"></div>
+</div>
+
+<!-- Search Page -->
+<div class="page" id="page-search">
+<div class="search-bar">
+<input type="text" id="searchInput" placeholder="输入搜索关键词..." onkeydown="if(event.key==='Enter')doSearch()">
+<select id="searchMode">
+<option value="keyword">关键词搜索</option>
+<option value="semantic">语义搜索</option>
+<option value="hybrid">混合搜索</option>
+<option value="ai">AI 智能搜索</option>
+<option value="glossary">📖 词条解释</option>
+</select>
+<button onclick="doSearch()">搜索</button>
+</div>
+<div id="searchResults"></div>
+</div>
+
+<!-- Chat Page -->
+<div class="page" id="page-chat" style="padding:0;height:100%">
+<div class="chat-layout">
+<div class="chat-sidebar">
+<div class="new-chat"><button onclick="newChat()">+ 新对话</button></div>
+<div class="chat-list" id="chatList"></div>
+</div>
+<div class="chat-main">
+<div class="chat-messages" id="chatMessages"><div style="text-align:center;color:var(--text2);padding:40px">选择或创建一个对话开始</div></div>
+<div class="chat-opts">
+<label><input type="checkbox" id="useRag" checked> 知识库增强</label>
+<select id="chatSearchMode"><option value="keyword">关键词</option><option value="semantic">语义</option><option value="hybrid">混合</option><option value="glossary">📖 词条</option></select>
+<label style="margin-left:8px"><input type="checkbox" id="webSearch"> 🌐 联网搜索</label>
+</div>
+<div id="chatStatus" style="display:none;padding:8px 20px;font-size:12px;color:var(--text2);background:var(--bg2);border-top:1px solid var(--border)">
+  <span class="spinner" style="display:inline-block;width:12px;height:12px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;vertical-align:middle;margin-right:6px"></span>
+  <span id="chatStatusText">处理中...</span>
+</div>
+<div class="chat-input">
+<input type="text" id="chatInput" placeholder="输入消息..." onkeydown="if(event.key==='Enter')sendChat()">
+<button onclick="sendChat()">发送</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Skills Page -->
+<div class="page" id="page-skills">
+<div style="margin-bottom:14px"><button class="btn btn-primary" onclick="refreshSkills()">刷新技能列表</button></div>
+<div id="skillsList"></div>
+</div>
+
+
+<!-- Logs Page -->
+<div class="page" id="page-logs">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+<h3 style="font-size:15px">运行日志</h3>
+<div style="display:flex;gap:8px">
+<button class="btn-sm" onclick="clearLogs()">清空</button>
+<button class="btn-sm" onclick="toggleLogPause()" id="logPauseBtn">⏸ 暂停</button>
+</div>
+</div>
+<div id="logContainer" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;height:calc(100vh - 160px);overflow-y:auto;font-family:Consolas,'Courier New',monospace;font-size:12px;line-height:1.8"></div>
+</div>
+
+<!-- Settings Page -->
+<div class="page" id="page-settings">
+<div class="settings-section">
+<h3>🤖 AI 对话模型</h3>
+<div class="field"><label>API Base URL</label><input id="s_ai_chat_base_url" placeholder="https://api.openai.com/v1"><div class="hint">OpenAI 兼容接口地址</div></div>
+<div class="field"><label>API Key</label><input id="s_ai_chat_api_key" type="password" placeholder="sk-..."></div>
+<div class="model-row"><div class="field" style="position:relative"><label>模型名称</label><input id="s_ai_chat_model" placeholder="gpt-4o-mini" autocomplete="off"><div class="model-dropdown" id="chatModelDropdown"></div></div><button class="btn-fetch" onclick="fetchModels('chat')">🔍 获取模型列表</button></div>
+<button class="btn btn-test" onclick="testSetting('ai')">测试连接</button><div class="test-result" id="test-ai"></div>
+</div>
+
+<div class="settings-section">
+<h3>📐 Embedding 模型（可选，用于语义搜索）</h3>
+<div class="field"><label>API Base URL</label><input id="s_ai_embedding_base_url" placeholder="留空则使用对话模型的地址"></div>
+<div class="field"><label>API Key</label><input id="s_ai_embedding_api_key" type="password"></div>
+<div class="model-row"><div class="field" style="position:relative"><label>模型名称</label><input id="s_ai_embedding_model" placeholder="text-embedding-3-small" autocomplete="off"><div class="model-dropdown" id="embeddingModelDropdown"></div></div><button class="btn-fetch" onclick="fetchModels('embedding')">🔍 获取模型列表</button></div>
+<button class="btn btn-test" onclick="testSetting('embedding')">测试连接</button><div class="test-result" id="test-embedding"></div>
+</div>
+
+<div class="settings-section">
+<h3>🔄 Reranker 模型（可选，优化搜索排序）</h3>
+<div class="field"><label>API Base URL</label><input id="s_reranker_base_url" placeholder="留空则使用 Embedding 地址"></div>
+<div class="field"><label>API Key</label><input id="s_reranker_api_key" type="password" placeholder="留空则使用 Embedding Key"></div>
+<div class="field"><label>模型名称</label><input id="s_reranker_model" placeholder="BAAI/bge-reranker-v2-m3"></div>
+<div class="field"><div class="hint">Reranker 使用交叉编码器对搜索结果重排序，显著提高相关性。推荐 SiliconFlow 的 BAAI/bge-reranker-v2-m3</div></div>
+<button class="btn btn-test" onclick="testSetting('reranker')">测试连接</button><div class="test-result" id="test-reranker"></div>
+</div>
+
+<div class="settings-section">
+<h3>🌐 联网搜索工具</h3>
+<div class="field"><label>搜索工具类型</label>
+<select id="s_web_search_tool">
+<option value="web_search_preview">web_search_preview (OpenAI)</option>
+<option value="web_search">web_search</option>
+<option value="web_search_2025_3_11">web_search_2025_3_11 (OpenAI 旧版)</option>
+</select>
+<div class="hint">模型自带联网搜索功能时使用。不同提供商可能使用不同的工具类型名称</div>
+</div>
+</div>
+
+<div class="settings-section">
+<h3>🔍 外部搜索 API（用于未知格式学习和 AI 搜索）</h3>
+<div class="field"><label>搜索引擎</label><select id="s_search_provider"><option value="">未启用</option><option value="tavily">Tavily</option><option value="bing">Bing</option><option value="custom">自定义</option></select></div>
+<div class="field"><label>API Key</label><input id="s_search_api_key" type="password"></div>
+<div class="field"><label>自定义端点（仅 custom 模式）</label><input id="s_search_endpoint" placeholder="https://..."></div>
+<button class="btn btn-test" onclick="testSetting('search')">测试连接</button><div class="test-result" id="test-search"></div>
+</div>
+
+<div style="text-align:right"><button class="btn btn-primary" onclick="saveSettings()">💾 保存设置</button></div>
+</div>
+
+</div>
+</main>
+</div>
+
+<script>
+// ── State ──
+let currentPage = 'import';
+let currentChatId = null;
+let chats = [];
+
+// ── Navigation ──
+function showPage(name) {
+  currentPage = name;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name)?.classList.add('active');
+  document.querySelectorAll('.sidebar nav a').forEach(a => {
+    a.classList.toggle('active', a.dataset.page === name);
+  });
+  const titles = {import:'导入文档',docs:'文档列表',search:'搜索知识库',chat:'AI 对话',skills:'技能管理',settings:'系统设置'};
+  document.getElementById('pageTitle').textContent = titles[name] || '';
+  if (name === 'docs') loadDocs();
+  if (name === 'chat') loadChats();
+  if (name === 'skills') loadSkills();
+  if (name === 'settings') loadSettings();
+  if (name === 'import') loadRecentDocs();
+  if (name === 'logs') { loadLogs(); startLogStream(); }
+}
+
+// ── API helpers ──
+async function api(path, opts = {}) {
+  const resp = await fetch('/api' + path, {
+    headers: { 'Content-Type': 'application/json', ...opts.headers },
+    ...opts,
+  });
+  if (!resp.ok) throw new Error(await resp.text());
+  return resp.json();
+}
+
+function toast(msg) {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// ── Upload ──
+const zone = document.getElementById('uploadZone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('dragover'); handleUpload(e.dataTransfer.files); });
+
+async function handleUpload(files) {
+  const progress = document.getElementById('uploadProgress');
+  for (const file of files) {
+    const fd = new FormData();
+    fd.append('file', file);
+    progress.innerHTML = `<div class="doc-card"><div class="info"><div class="name">⏳ 正在导入: ${file.name}</div></div></div>`;
+    try {
+      const result = await fetch('/api/documents/upload', { method: 'POST', body: fd }).then(r => r.json());
+      toast(`✅ ${file.name} 导入成功 (${result.chunks || 0} 个分块)`);
+      progress.innerHTML = '';
+      loadRecentDocs();
+    } catch (e) {
+      toast(`❌ ${file.name} 导入失败: ${e.message || e}`);
+      progress.innerHTML = '';
+    }
+  }
+}
+
+async function loadRecentDocs() {
+  try {
+    const { documents } = await api('/documents?limit=10');
+    const el = document.getElementById('recentDocs');
+    el.innerHTML = documents.length ? '<h3 style="margin-bottom:10px;font-size:14px;color:var(--text2)">最近导入</h3>' + documents.map(docCard).join('') : '';
+  } catch(e) {}
+}
+
+// ── Documents ──
+function docCard(d) {
+  const s = d.status === 'ready' ? 'status-ready' : d.status === 'pending' ? 'status-pending' : 'status-error';
+  return `<div class="doc-card"><div class="info"><div class="name">${d.title || d.filename}</div><div class="meta">${d.filename} · ${d.file_type} · ${formatSize(d.source_size)}</div></div><span class="status ${s}">${d.status}</span><div class="actions"><button class="btn-sm" onclick="viewDoc('${d.id}')">查看</button><button class="btn-sm" onclick="deleteDoc('${d.id}')">删除</button></div></div>`;
+}
+
+function formatSize(b) { if (!b) return ''; if (b < 1024) return b + ' B'; if (b < 1048576) return (b/1024).toFixed(1) + ' KB'; return (b/1048576).toFixed(1) + ' MB'; }
+
+async function loadDocs() {
+  try {
+    const { documents } = await api('/documents');
+    document.getElementById('allDocs').innerHTML = documents.length ? documents.map(docCard).join('') : '<p style="color:var(--text2);padding:20px">暂无文档</p>';
+  } catch(e) {}
+}
+
+async function viewDoc(id) {
+  try {
+    const { document: doc, chunks } = await api(`/documents/${id}`);
+    showPage('search');
+    document.getElementById('searchResults').innerHTML = `<div style="margin-bottom:16px"><h3>${doc.title}</h3><p style="color:var(--text2);font-size:13px">${doc.filename} · ${doc.status}</p></div>` +
+      chunks.map(c => `<div class="result-card"><h4>${c.heading || '段落 ' + c.seq}</h4><div class="preview">${c.content.substring(0, 500)}</div></div>`).join('');
+  } catch(e) { toast('加载失败'); }
+}
+
+async function deleteDoc(id) {
+  if (!confirm('确定删除？')) return;
+  await api(`/documents/${id}`, { method: 'DELETE' });
+  toast('已删除');
+  loadDocs(); loadRecentDocs(); startLogStream();
+}
+
+// ── Search ──
+async function doSearch() {
+  const q = document.getElementById('searchInput').value.trim();
+  const mode = document.getElementById('searchMode').value;
+  if (!q) return;
+  document.getElementById('searchResults').innerHTML = '<div class="spinner"></div>';
+  try {
+    const data = await api(`/search?q=${encodeURIComponent(q)}&mode=${mode}`);
+    const results = data.results || [];
+    const grouped = data.grouped || [];
+    if (!results.length) {
+      document.getElementById('searchResults').innerHTML = '<p style="color:var(--text2);padding:20px">未找到相关结果</p>';
+      return;
+    }
+    if (mode === 'glossary' && results[0] && results[0].glossary) {
+      document.getElementById('searchResults').innerHTML = results.map(r => renderGlossary(r, q)).join('');
+    } else {
+      document.getElementById('searchResults').innerHTML = `<div style="margin-bottom:12px;font-size:13px;color:var(--text2)">共找到 <b style="color:var(--text)">${results.length}</b> 个匹配片段，来自 <b style="color:var(--text)">${grouped.length}</b> 个文档</div>` +
+        grouped.map(g => renderDocGroup(g, q)).join('');
+    }
+  } catch(e) {
+    document.getElementById('searchResults').innerHTML = `<p style="color:var(--red);padding:20px">搜索出错: ${e.message || e}</p>`;
+  }
+}
+
+function renderDocGroup(g, query) {
+  const chunksHtml = (g.chunks || []).map((c, i) =>
+    `<div style="margin-top:8px;padding:10px 12px;background:var(--bg3);border-radius:6px;cursor:pointer" onclick="this.querySelector('.chunk-detail').style.display=this.querySelector('.chunk-detail').style.display==='none'?'block':'none'">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:13px;color:var(--accent2);font-weight:500">${c.heading || 'Section ' + (c.seq + 1)}</span>
+        <span style="font-size:11px;color:var(--text2)"> #${c.seq + 1}</span>
+      </div>
+      <div class="chunk-detail" style="display:${i === 0 ? 'block' : 'none'};margin-top:8px;font-size:13px;color:var(--text2);line-height:1.6;white-space:pre-wrap">${renderMarkdown(highlightText(c.content.substring(0, 800), query))}</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:4px;overflow:hidden;max-height:${i === 0 ? '0' : '20px'};transition:max-height .2s">${renderMarkdown(highlightText(c.content.substring(0, 150), query))}...</div>
+    </div>`
+  ).join('');
+
+  return `<div class="result-card" style="border-left:3px solid var(--accent)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-size:14px;font-weight:600;color:var(--text)">📄 ${g.doc_title || g.doc_filename}</div>
+      <span style="font-size:12px;color:var(--text2);background:var(--bg3);padding:2px 8px;border-radius:10px">${g.chunk_count} 处匹配</span>
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:8px">${g.doc_filename}</div>
+    ${chunksHtml}
+  </div>`;
+}
+
+function renderGlossary(r, query) {
+  const g = r.glossary || {};
+  const keyPoints = (g.key_points || []).map(p => `<li>${p}</li>`).join('');
+  const mentions = (r.mentions || []).slice(0, 10).map(m =>
+    `<div style="margin-top:8px;padding:10px 12px;background:var(--bg3);border-radius:6px">
+      <div style="font-size:12px;color:var(--accent2);margin-bottom:4px">📄 ${m.doc_title || m.doc_filename}${m.heading ? ' / ' + m.heading : ''}</div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.6">${highlightText(m.content.substring(0, 400), query)}</div>
+    </div>`
+  ).join('');
+
+  return `<div class="result-card" style="border-left:3px solid var(--accent)">
+    <div style="font-size:18px;font-weight:700;margin-bottom:12px;color:var(--accent2)">📖 ${g.term || query}</div>
+    <div style="margin-bottom:12px">
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">📝 释义</div>
+      <div style="font-size:14px;color:var(--text2);line-height:1.7">${g.definition || '暂无定义'}</div>
+    </div>
+    ${keyPoints ? `<div style="margin-bottom:12px">
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">📌 核心要点</div>
+      <ul style="font-size:13px;color:var(--text2);line-height:1.7;padding-left:20px">${keyPoints}</ul>
+    </div>` : ''}
+    ${g.context_analysis ? `<div style="margin-bottom:12px">
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">🔍 知识库关联分析</div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.7">${g.context_analysis}</div>
+    </div>` : ''}
+    <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:12px">
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">📚 知识库提及 (${r.mention_count || 0} 处)</div>
+      ${mentions || '<div style="font-size:13px;color:var(--text2)">该术语在当前知识库中暂未找到直接提及</div>'}
+    </div>
+  </div>`;
+}
+
+function highlightText(text, query) {
+  if (!query) return text;
+  const re = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  return text.replace(re, '<mark>$1</mark>');
+}
+
+function renderMarkdown(text) {
+  if (!text) return '';
+  // Convert markdown images to HTML
+  text = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="/api/images/$2" alt="$1" loading="lazy">');
+  // Convert markdown bold
+  text = text.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+  // Convert newlines
+  text = text.replace(/\n/g, '<br>');
+  return text;
+}
+
+// ── Chat ──
+async function loadChats() {
+  try {
+    chats = await api('/chats');
+    const el = document.getElementById('chatList');
+    el.innerHTML = chats.map(c => `<div class="chat-item ${c.id === currentChatId ? 'active' : ''}" onclick="selectChat('${c.id}')"><span>${c.title}</span><span class="del" onclick="event.stopPropagation();deleteChat('${c.id}')">✕</span></div>`).join('');
+  } catch(e) {}
+}
+
+async function newChat() {
+  const c = await api('/chats', { method: 'POST', body: JSON.stringify({}) });
+  currentChatId = c.id;
+  await loadChats();
+  document.getElementById('chatMessages').innerHTML = '';
+}
+
+async function selectChat(id) {
+  currentChatId = id;
+  await loadChats();
+  try {
+    const { messages } = await api(`/chats/${id}`);
+    const el = document.getElementById('chatMessages');
+    el.innerHTML = messages.map(m => msgHtml(m)).join('');
+    el.scrollTop = el.scrollHeight;
+  } catch(e) {}
+}
+
+function msgHtml(m) {
+  const sources = m.sources && m.sources !== '[]' ? JSON.parse(m.sources) : [];
+  return `<div class="msg ${m.role}"><div class="bubble">${escapeHtml(m.content)}</div>${sources.length ? '<div class="sources">' + sources.map(s => `<span class="source-tag">📄 ${s.doc_title || ''}${s.heading ? ' / ' + s.heading : ''}</span>`).join('') + '</div>' : ''}</div>`;
+}
+
+function escapeHtml(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>'); }
+
+function showChatStatus(text) {
+  const el = document.getElementById('chatStatus');
+  if (el) { el.style.display = 'block'; document.getElementById('chatStatusText').textContent = text; }
+}
+function hideChatStatus() {
+  const el = document.getElementById('chatStatus');
+  if (el) el.style.display = 'none';
+}
+async function sendChat() {
+  if (!currentChatId) { await newChat(); }
+  const input = document.getElementById('chatInput');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+
+  const el = document.getElementById('chatMessages');
+  el.innerHTML += `<div class="msg user"><div class="bubble">${escapeHtml(msg)}</div></div>`;
+  const assistantDiv = document.createElement('div');
+  assistantDiv.className = 'msg assistant';
+  assistantDiv.innerHTML = '<div class="bubble"><div class="spinner"></div></div>';
+  el.appendChild(assistantDiv);
+  el.scrollTop = el.scrollHeight;
+  showChatStatus('正在搜索知识库...');
+
+  try {
+    showChatStatus('正在调用 AI 模型...');
+    const resp = await fetch(`/api/chats/${currentChatId}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: msg,
+        use_rag: document.getElementById('useRag').checked,
+        search_mode: document.getElementById('chatSearchMode').value,
+        web_search: document.getElementById('webSearch').checked,
+        stream: true,
+      }),
+    });
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let fullText = '';
+    let sources = [];
+    const bubble = assistantDiv.querySelector('.bubble');
+    bubble.textContent = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const text = decoder.decode(value, { stream: true });
+      const lines = text.split('\n');
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        try {
+          const data = JSON.parse(line.slice(6));
+          if (data.type === 'chunk') {
+            fullText += data.content;
+            bubble.innerHTML = escapeHtml(fullText);
+          } else if (data.type === 'done') {
+            sources = data.sources || [];
+          }
+        } catch(e) {}
+      }
+      el.scrollTop = el.scrollHeight;
+    }
+
+    hideChatStatus();
+    if (sources.length) {
+      assistantDiv.innerHTML += '<div class="sources">' + sources.map(s => `<span class="source-tag">📄 ${s.doc_title || ''}${s.heading ? ' / ' + s.heading : ''}</span>`).join('') + '</div>';
+    }
+    loadChats();
+  } catch(e) {
+    hideChatStatus();
+    assistantDiv.querySelector('.bubble').textContent = '发送失败: ' + (e.message || e);
+  }
+}
+
+async function deleteChat(id) {
+  await api(`/chats/${id}`, { method: 'DELETE' });
+  if (currentChatId === id) { currentChatId = null; document.getElementById('chatMessages').innerHTML = ''; }
+  loadChats();
+}
+
+
+// ── Logs ──
+let logSource = null;
+let logPaused = false;
+
+function startLogStream() {
+  if (logSource) logSource.close();
+  logSource = new EventSource('/api/logs/stream');
+  logSource.onmessage = function(e) {
+    if (logPaused) return;
+    try {
+      const entry = JSON.parse(e.data);
+      appendLog(entry);
+    } catch(err) {}
+  };
+  logSource.onerror = function() {
+    setTimeout(startLogStream, 3000);
+  };
+}
+
+function appendLog(entry) {
+  const container = document.getElementById('logContainer');
+  if (!container) return;
+  const el = document.createElement('div');
+  el.className = 'log-entry';
+  el.innerHTML = `<span class="log-time">${entry.time || ''}</span><span class="log-level ${entry.level || 'info'}">${entry.level || 'info'}</span><span class="log-module">[${entry.module || ''}]</span><span class="log-msg">${escapeHtml(entry.message || '')}</span>`;
+  container.appendChild(el);
+  container.scrollTop = container.scrollHeight;
+}
+
+function clearLogs() {
+  document.getElementById('logContainer').innerHTML = '';
+}
+
+function toggleLogPause() {
+  logPaused = !logPaused;
+  document.getElementById('logPauseBtn').textContent = logPaused ? '▶ 继续' : '⏸ 暂停';
+}
+
+// Auto-load recent logs when page opens
+async function loadLogs() {
+  try {
+    const data = await api('/logs?limit=200');
+    const container = document.getElementById('logContainer');
+    if (!container) return;
+    container.innerHTML = '';
+    (data.logs || []).forEach(entry => appendLog(entry));
+  } catch(e) {}
+}
+
+// ── Skills ──
+async function loadSkills() {
+  try {
+    const skills = await api('/skills');
+    document.getElementById('skillsList').innerHTML = skills.map(s =>
+      `<div class="skill-card"><div class="info"><div class="name">${s.name}</div><div class="desc">${s.description}</div><div class="desc">扩展名: ${s.extensions} · 状态: ${s.active ? '启用' : '禁用'}</div></div><span class="source-tag ${s.source === 'builtin' ? 'source-builtin' : 'source-learned'}">${s.source === 'builtin' ? '内置' : 'AI 学习'}</span></div>`
+    ).join('') || '<p style="color:var(--text2)">暂无技能</p>';
+  } catch(e) {}
+}
+
+async function refreshSkills() {
+  await api('/skills/refresh', { method: 'POST' });
+  toast('技能列表已刷新');
+  loadSkills();
+}
+
+// ── Settings ──
+async function loadSettings() {
+  try {
+    const settings = await api('/settings');
+    document.querySelectorAll('[id^="s_"]').forEach(el => {
+      const key = el.id.replace('s_', '');
+      if (settings[key]) el.value = settings[key];
+    });
+  } catch(e) {}
+}
+
+async function saveSettings() {
+  const settings = {};
+  document.querySelectorAll('[id^="s_"]').forEach(el => {
+    settings[el.id.replace('s_', '')] = el.value;
+  });
+  await api('/settings', { method: 'POST', body: JSON.stringify(settings) });
+  toast('设置已保存');
+}
+
+async function testSetting(type) {
+  const el = document.getElementById('test-' + type);
+  el.className = 'test-result'; el.textContent = '测试中...';
+  try {
+    const result = await api(`/settings/test-${type}`, { method: 'POST' });
+    if (result.ok) {
+      el.className = 'test-result test-ok';
+      el.textContent = '✅ 连接成功' + (result.response ? ': ' + result.response : '') + (result.dimensions ? ` (${result.dimensions} 维)` : '');
+    } else {
+      el.className = 'test-result test-fail';
+      el.textContent = '❌ ' + (result.error || '连接失败');
+    }
+  } catch(e) {
+    el.className = 'test-result test-fail';
+    el.textContent = '❌ 请求失败: ' + e.message;
+  }
+}
+
+// Fetch Models
+async function fetchModels(type) {
+  var baseUrl, apiKey;
+  if (type === 'chat') {
+    baseUrl = document.getElementById('s_ai_chat_base_url').value.trim();
+    apiKey = document.getElementById('s_ai_chat_api_key').value.trim();
+  } else {
+    baseUrl = document.getElementById('s_ai_embedding_base_url').value.trim() || document.getElementById('s_ai_chat_base_url').value.trim();
+    apiKey = document.getElementById('s_ai_embedding_api_key').value.trim() || document.getElementById('s_ai_chat_api_key').value.trim();
+  }
+  var dd = document.getElementById(type + 'ModelDropdown');
+  if (!baseUrl) { toast('请先填写 API Base URL'); return; }
+  dd.innerHTML = '<div style="padding:10px;color:var(--text2)"><div class="spinner"></div> 获取中...</div>';
+  dd.classList.add('open');
+  try {
+    var result = await api('/settings/fetch-models', {
+      method: 'POST',
+      body: JSON.stringify({ base_url: baseUrl, api_key: apiKey }),
+    });
+    if (result.ok && result.models.length) {
+      dd.innerHTML = result.models.map(function(m) {
+        return '<div class="opt" onclick="selectModel(\'' + type + '\', \'' + m.id.replace(/'/g, "\\'") + '\')"><span>' + m.id + '</span><span class="owner">' + (m.owned_by || '') + '</span></div>';
+      }).join('');
+    } else if (result.ok) {
+      dd.innerHTML = '<div style="padding:10px;color:var(--text2)">未找到可用模型</div>';
+    } else {
+      dd.innerHTML = '<div style="padding:10px;color:var(--red)">获取失败: ' + (result.error || '') + '</div>';
+    }
+  } catch(e) {
+    dd.innerHTML = '<div style="padding:10px;color:var(--red)">请求错误: ' + e.message + '</div>';
+  }
+}
+
+function selectModel(type, modelId) {
+  document.getElementById('s_ai_' + type + '_model').value = modelId;
+  document.getElementById(type + 'ModelDropdown').classList.remove('open');
+  toast('已选择: ' + modelId);
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.model-row')) {
+    document.querySelectorAll('.model-dropdown').forEach(function(d) { d.classList.remove('open'); });
+  }
+});
+
+// ── Stats ──
+async function loadStats() {
+  try {
+    const s = await api('/stats');
+    document.getElementById('stats').textContent = `文档: ${s.documents} · 技能: ${s.skills} · 对话: ${s.chats}`;
+  } catch(e) {}
+}
+
+// ── Init ──
+loadStats();
+loadRecentDocs();
+</script>
+</body>
+</html>
